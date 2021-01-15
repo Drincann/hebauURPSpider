@@ -42,6 +42,8 @@ class Main:
         jq = jQuery(this.__getInfoHtml(stuid))
         # info
         tr = jq('table#report1 tr')
+        if jq(jq(tr[1]).children('td')[1]).html() is None:
+            return None
         stuInfo = {
             "name": jq(jq(tr[1]).children('td')[1]).html(),
             "stuid": jq(jq(tr[1]).children('td')[3]).html(),
@@ -90,14 +92,14 @@ class Main:
         # end for
         return stuInfo
 
-    def getInfoList(this, idRange, outFile):
+    def getInfoList(this, idRange):
         infos = []
         for id in idRange:
             info = this.loadInfoById(str(id))
-            infos.append(info)
+            if info is not None:
+                infos.append(info)
+                print(info['stuid'])
         return infos
-
-
 
     # private
     def __getInfoHtml(this, stuid):
@@ -124,16 +126,16 @@ def saveAsJson(dic, outFile):
     jsStr = json.dumps(dic, ensure_ascii=False)
     with open(outFile, 'wt', encoding='utf-8') as f:
         f.write(jsStr)
-    print(id)
 
 
-def saveClass05AsJson(obj):
-    idRange = list(range(2019984040101, 2019984040130)) \
+def get1_5InMem(obj):
+    idRange = list(range(2019984040101, 2019984040131)) \
               + list(range(2019984040201, 2019984040231)) \
               + list(range(2019984040301, 2019984040331)) \
               + list(range(2019984040401, 2019984040431)) \
               + list(range(2019984040501, 2019984040531))
-    obj.getInfosAndsaveAsJson(idRange, './out.json')
+    return obj.getInfoList(idRange, './out.json')
+
 
 # 去除正常考试及补考的信息
 def duplicateRemoval(infoList):
@@ -163,7 +165,6 @@ def duplicateRemoval(infoList):
     return infoList
 
 
-
 def calCreditScore(info):
     scoreSum = 0.0
     creditSum = 0.0
@@ -189,29 +190,68 @@ def calCreditScoreDict(infoList):
 def sortedCreditScoreList(infoList):
     creditScoreDict = calCreditScoreDict(infoList)
     sortedList = []
-    for key in sorted(creditScoreDict.keys(),reverse=True):
+    for key in sorted(creditScoreDict.keys(), reverse=True):
         sortedList.append(creditScoreDict[key])
     return sortedList
 
-def someProcess:
-    sortedList = sortedCreditScoreList()
+# 爬出成绩并 save as json
+def getAndSaveAsJson(idRange, outSrc, out):
+    obj = Main()
+    if not (obj.login('****', '****')): exit()
+    infoList = obj.getInfoList(idRange)
+    saveAsJson(infoList, outSrc)
+    infoList = duplicateRemoval(infoList)
+    saveAsJson(infoList, out)
+
+# 姓名学号学分成绩和成绩
+# scoreTplStuid 是以谁的科目做显示模板的那个人的学号
+def saveAsXlsx(infoList, scoreTplStuid, outFile):
+    # 为了在后面方便地拿到科目成绩，这里需要散列一下，弄一个 coursesDic
+    coursesDic = {}
+    for info in infoList:
+        courseDic = {}
+        for course in info['courses']:
+            courseDic[course['name']] = course
+        coursesDic[info['stuid']] = courseDic
+
+    # 排序过的 infoList
+    sortedList = sortedCreditScoreList(infoList)
+
     # init excel
     wb = openpyxl.Workbook()
     ws = wb.active
 
+    tplCourses = coursesDic[scoreTplStuid]
+
     row = 1
+    col = 1
+    for key in sortedList[0]:
+        ws.cell(row=row, column=col).value = key
+        col += 1
+    courses = []
+    for course in tplCourses:
+        courses.append(tplCourses[course]['name'])
+        ws.cell(row=row, column=col).value = tplCourses[course]['name']
+        col += 1
+        pass
+    row += 1
     for info in sortedList:
         col = 1
         for key in info.keys():
-            ws.cell(row=row,column=col).value = info[key]
+            ws.cell(row=row, column=col).value = info[key]
+            col += 1
+        for key in courses:
+            if key not in coursesDic[info['stuid']]:
+                ws.cell(row=row, column=col).value = ''
+            else:
+                ws.cell(row=row, column=col).value = coursesDic[info['stuid']][key]['score']
             col += 1
         row += 1
         print(info)
 
-    wb.save('./out.xlsx')
+    wb.save(outFile)
 
-    # login
-    # obj = Main()
-    # if not (obj.login('******', '******')): exit()
+
 if __name__ == '__main__':
-    pass
+
+
