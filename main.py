@@ -1,7 +1,10 @@
 import requests_html
-import cv2, threading, os
+import cv2
+import threading
+import os
 from pyquery import PyQuery as jQuery
-import openpyxl, json
+import openpyxl
+import json
 
 
 class Main:
@@ -11,9 +14,11 @@ class Main:
 
     def login(this, user, pwd):
         codeImg = this.__getCodeImg()
-        threading.Thread(target=this.__showCodeImg, args=[codeImg]).start()
+        this.__saveTo('./temp.jpg', codeImg)
         data = {"zjh": str(user), "mm": str(pwd), "v_yzm": str(input("验证码："))}
-        loginRes = this.session.post('http://urp.hebau.edu.cn/loginAction.do', data=data)
+        os.remove('./temp.jpg')
+        loginRes = this.session.post(
+            'http://urp.hebau.edu.cn/loginAction.do', data=data)
         return True if loginRes.status_code == 200 else False
 
     def getInfoStructure(this):
@@ -92,27 +97,31 @@ class Main:
         # end for
         return stuInfo
 
-    def getInfoList(this, idRange):
-        infos = []
+    def getInfoList(this, idRange, saveAsJsonOpts={'save': False, 'dir': ''}):
+        infoList = []
         for id in idRange:
-            info = this.loadInfoById(str(id))
+            isError = True
+            while isError:
+                isError = False
+                try:
+                    info = this.loadInfoById(str(id))
+                except Exception as e:
+                    isError = True
+
             if info is not None:
-                infos.append(info)
+                infoList.append(info)
                 print(info['stuid'])
-        return infos
+                if saveAsJsonOpts['save'] is True:
+                    saveAsJson(infoList, saveAsJsonOpts['dir'])
+        return infoList
 
     # private
     def __getInfoHtml(this, stuid):
-        data = {"LS_XH": str(stuid), "resultPage": "http://urp.hebau.edu.cn:80/reportFiles/cj/cj_zwcjd.jsp?"}
-        res = this.session.post(url="http://urp.hebau.edu.cn/setReportParams", data=data)
+        data = {"LS_XH": str(
+            stuid), "resultPage": "http://urp.hebau.edu.cn:80/reportFiles/cj/cj_zwcjd.jsp?"}
+        res = this.session.post(
+            url="http://urp.hebau.edu.cn/setReportParams", data=data)
         return res.text
-
-    def __showCodeImg(this, data):
-        this.__saveTo('./temp.jpg', data)
-        codeImg = cv2.imread('./temp.jpg')
-        cv2.imshow('code', codeImg)
-        cv2.waitKey(0)
-        os.remove('./temp.jpg')
 
     def __getCodeImg(this):
         return this.session.get('http://urp.hebau.edu.cn/validateCodeAction.do?random=0.08322962004793921').content
@@ -130,14 +139,35 @@ def saveAsJson(dic, outFile):
 
 def get1_5InMem(obj):
     idRange = list(range(2019984040101, 2019984040131)) \
-              + list(range(2019984040201, 2019984040231)) \
-              + list(range(2019984040301, 2019984040331)) \
-              + list(range(2019984040401, 2019984040431)) \
-              + list(range(2019984040501, 2019984040531))
-    return obj.getInfoList(idRange, './out.json')
+        + list(range(2019984040201, 2019984040231)) \
+        + list(range(2019984040301, 2019984040331)) \
+        + list(range(2019984040401, 2019984040431)) \
+        + list(range(2019984040501, 2019984040531))
+    return obj.getInfoList(idRange)
+
+
+def get1_5RangeOfSE():
+    return list(range(2019984040101, 2019984040131)) \
+        + list(range(2019984040201, 2019984040231)) \
+        + list(range(2019984040301, 2019984040331)) \
+        + list(range(2019984040401, 2019984040431)) \
+        + list(range(2019984040501, 2019984040531))
+
+
+def get1_5RangeOfCS():
+    return \
+        list(range(2019984130101, 2019984130132)) \
+        + list(range(2019984130201, 2019984130231)) \
+        + list(range(2019984130301, 2019984130331)) \
+        + list(range(2019984130401, 2019984130430)) \
+        + list(range(2019984130501, 2019984130530))\
+        + [2019984010119, 2019984010206, 2019984110409, 2019984110429, 2017984130409,
+            2019984020303, 2019984020305, 2019984010211, 2019984010308, 2019984010527]
 
 
 # 去除正常考试及补考的信息
+
+
 def duplicateRemoval(infoList):
     for info in infoList:
         refresher = []
@@ -177,13 +207,17 @@ def calCreditScore(info):
 def calCreditScoreDict(infoList):
     creditScoreDict = {}
     for info in infoList:
-        creditScore = calCreditScore(info)
-        dic = {
-            "name": info['name'],
-            "stuid": info['stuid'],
-            "creditScore": creditScore,
-        }
-        creditScoreDict[creditScore] = dic
+        try:
+            creditScore = calCreditScore(info)
+            dic = {
+                "name": info['name'],
+                "stuid": info['stuid'],
+                "creditScore": creditScore,
+            }
+            creditScoreDict[creditScore] = dic
+        except Exception as e:
+            print(e)
+
     return creditScoreDict
 
 
@@ -195,16 +229,22 @@ def sortedCreditScoreList(infoList):
     return sortedList
 
 # 爬出成绩并 save as json
-def getAndSaveAsJson(idRange, outSrc, out):
+
+
+def getAndSaveAsJson(uname, pwd, idRange, outSrc, outCleaned):
     obj = Main()
-    if not (obj.login('****', '****')): exit()
-    infoList = obj.getInfoList(idRange)
-    saveAsJson(infoList, outSrc)
+    if not (obj.login(uname, pwd)):
+        exit()
+    infoList = obj.getInfoList(idRange, saveAsJsonOpts={
+                               'save': True, 'dir': outSrc})
     infoList = duplicateRemoval(infoList)
-    saveAsJson(infoList, out)
+    saveAsJson(infoList, outCleaned)
+    return infoList
 
 # 姓名学号学分成绩和成绩
 # scoreTplStuid 是以谁的科目做显示模板的那个人的学号
+
+
 def saveAsXlsx(infoList, scoreTplStuid, outFile):
     # 为了在后面方便地拿到科目成绩，这里需要散列一下，弄一个 coursesDic
     coursesDic = {}
@@ -244,14 +284,16 @@ def saveAsXlsx(infoList, scoreTplStuid, outFile):
             if key not in coursesDic[info['stuid']]:
                 ws.cell(row=row, column=col).value = ''
             else:
-                ws.cell(row=row, column=col).value = coursesDic[info['stuid']][key]['score']
+                ws.cell(
+                    row=row, column=col).value = coursesDic[info['stuid']][key]['score']
             col += 1
         row += 1
         print(info)
-
     wb.save(outFile)
 
 
 if __name__ == '__main__':
-
-
+    # example
+    infoList = getAndSaveAsJson('username', 'password',
+                                get1_5RangeOfCS(), './cssrc.json', './cscleaned.json')
+    saveAsXlsx(infoList, '2019984130206', '/Users/coder/Desktop/outCs.xlsx')
