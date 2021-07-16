@@ -173,6 +173,20 @@ def duplicateRemoval(infoList):
         refresher = []
         makeUp = []
 
+        # 若复修了，则删掉重修、正常以及补考的的
+        for course in info['courses']:
+            if course['method'] == '复修':
+                refresher.append(course['name'])
+        if len(refresher) != 0:
+            for course in info['courses']:
+                if course['method'] == '重修' and course['name'] in refresher:
+                    info['courses'].remove(course)
+                if course['method'] == '正常' and course['name'] in refresher:
+                    info['courses'].remove(course)
+                if course['method'] == '补考' and course['name'] in refresher:
+                    info['courses'].remove(course)
+
+        refresher = []
         # 仅保留最新一次考试，所以若重修了则需要把补考和正常的删掉，
         for course in info['courses']:
             if course['method'] == '重修':
