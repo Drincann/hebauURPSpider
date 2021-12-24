@@ -44,56 +44,60 @@ class Main:
         }
 
     def loadInfoById(this, stuid):
-        jq = jQuery(this.__getInfoHtml(stuid))
-        # info
-        tr = jq('table#report1 tr')
-        if jq(jq(tr[1]).children('td')[1]).html() is None:
-            return None
-        stuInfo = {
-            "name": jq(jq(tr[1]).children('td')[1]).html(),
-            "stuid": jq(jq(tr[1]).children('td')[3]).html(),
-            "sex": jq(jq(tr[1]).children('td')[5]).html(),
-            "id": jq(jq(tr[1]).children('td')[7]).html(),
+        htmlArr = this.__getInfoHtml(stuid)
+        stuInfo = {}
+        for html in htmlArr:
+            jq = jQuery(html)
+            # info
+            tr = jq('table#report1 tr')
+            if jq(jq(tr[1]).children('td')[1]).html() is None:
+                return None
+            if 'name' not in stuInfo:
+                stuInfo = {
+                    "name": jq(jq(tr[1]).children('td')[1]).html(),
+                    "stuid": jq(jq(tr[1]).children('td')[3]).html(),
+                    "sex": jq(jq(tr[1]).children('td')[5]).html(),
+                    "id": jq(jq(tr[1]).children('td')[7]).html(),
 
-            "nation": jq(jq(tr[2]).children('td')[1]).html(),
-            "nativePlace": jq(jq(tr[2]).children('td')[3]).html(),
-            "politicalOutlook": jq(jq(tr[2]).children('td')[5]).html(),
-            "birthday": jq(jq(tr[2]).children('td')[7]).html(),
+                    "nation": jq(jq(tr[2]).children('td')[1]).html(),
+                    "nativePlace": jq(jq(tr[2]).children('td')[3]).html(),
+                    "politicalOutlook": jq(jq(tr[2]).children('td')[5]).html(),
+                    "birthday": jq(jq(tr[2]).children('td')[7]).html(),
 
-            "clas": jq(jq(tr[3]).children('td')[1]).html(),
-            "entrance": jq(jq(tr[3]).children('td')[3]).html(),
-            "graduation": jq(jq(tr[3]).children('td')[5]).html(),
+                    "clas": jq(jq(tr[3]).children('td')[1]).html(),
+                    "entrance": jq(jq(tr[3]).children('td')[3]).html(),
+                    "graduation": jq(jq(tr[3]).children('td')[5]).html(),
 
-            "major": jq(jq(tr[4]).children('td')[1]).html(),
+                    "major": jq(jq(tr[4]).children('td')[1]).html(),
 
-            "Department": jq(jq(tr[5]).children('td')[1]).html(),
-            "courses": [],
-        }
+                    "Department": jq(jq(tr[5]).children('td')[1]).html(),
+                    "courses": [],
+                }
 
-        # course
-        begin = 7
-        end = tr.length - 5
-        for i in range(begin, end):
-            stuInfo['courses'].append({
-                "name": jq(jq(tr[i]).children('td')[0]).html(),
-                "credit": jq(jq(tr[i]).children('td')[1]).html(),
-                "score": jq(jq(tr[i]).children('td')[2]).html(),
-                "method": jq(jq(tr[i]).children('td')[3]).html(),
-                "attr": jq(jq(tr[i]).children('td')[4]).html(),
-                "time": jq(jq(tr[i]).children('td')[5]).html()
-            })
-            try:
-                if jq(jq(tr[i]).children('td')[6]).html() is not None:
-                    stuInfo['courses'].append({
-                        "name": jq(jq(tr[i]).children('td')[6]).html(),
-                        "credit": jq(jq(tr[i]).children('td')[7]).html(),
-                        "score": jq(jq(tr[i]).children('td')[8]).html(),
-                        "method": jq(jq(tr[i]).children('td')[9]).html(),
-                        "attr": jq(jq(tr[i]).children('td')[10]).html(),
-                        "time": jq(jq(tr[i]).children('td')[11]).html()
-                    })
-            except Exception as e:
-                pass
+            # course
+            begin = 7
+            end = tr.length - 5
+            for i in range(begin, end):
+                stuInfo['courses'].append({
+                    "name": jq(jq(tr[i]).children('td')[0]).html(),
+                    "credit": jq(jq(tr[i]).children('td')[1]).html(),
+                    "score": jq(jq(tr[i]).children('td')[2]).html(),
+                    "method": jq(jq(tr[i]).children('td')[3]).html(),
+                    "attr": jq(jq(tr[i]).children('td')[4]).html(),
+                    "time": jq(jq(tr[i]).children('td')[5]).html()
+                })
+                try:
+                    if jq(jq(tr[i]).children('td')[6]).html() is not None:
+                        stuInfo['courses'].append({
+                            "name": jq(jq(tr[i]).children('td')[6]).html(),
+                            "credit": jq(jq(tr[i]).children('td')[7]).html(),
+                            "score": jq(jq(tr[i]).children('td')[8]).html(),
+                            "method": jq(jq(tr[i]).children('td')[9]).html(),
+                            "attr": jq(jq(tr[i]).children('td')[10]).html(),
+                            "time": jq(jq(tr[i]).children('td')[11]).html()
+                        })
+                except Exception as e:
+                    pass
         # end for
         return stuInfo
 
@@ -116,12 +120,45 @@ class Main:
         return infoList
 
     # private
-    def __getInfoHtml(this, stuid):
-        data = {"LS_XH": str(
-            stuid), "resultPage": "http://urp.hebau.edu.cn:80/reportFiles/cj/cj_zwcjd.jsp?"}
-        res = this.session.post(
-            url="http://urp.hebau.edu.cn/setReportParams", data=data)
-        return res.text
+    def __getInfoHtml(this, stuid, page=1, toOtherPageData=None):
+        if toOtherPageData is None:
+            data = {"LS_XH": str(
+                stuid), "resultPage": "http://urp.hebau.edu.cn:80/reportFiles/cj/cj_zwcjd.jsp?"}
+            res = this.session.post(
+                url="http://urp.hebau.edu.cn/setReportParams", data=data)
+        else:
+            data = toOtherPageData
+            res = this.session.post(
+                url="http://urp.hebau.edu.cn:80/reportFiles/cj/cj_zwcjd.jsp?", data=data)
+
+        jq = jQuery(res.text)
+        buttons = jq('a')
+        nextButton = None
+        for button in buttons:
+            if jq(button).text() == '下一页':
+                nextButton = jq(button)
+                break
+        if nextButton is None:
+            return [res.text]
+        else:
+            nextPageForm = None
+            for form in jq('form'):
+                if jq(form).attr('name') == 'report1_turnPageForm':
+                    nextPageForm = jq(form)
+                    break
+            if nextPageForm is None:
+                return [res.text]
+            data = {
+                'reportParamsId': nextPageForm.children('input[name="reportParamsId"]').val(),
+                'srcId': nextPageForm.children('input[name="srcId"]').val(),
+                'report1_currPage': page+1,
+                'report1_sessionId': nextPageForm.children('input[name="report1_sessionId"]').val(),
+                'report1_cachedId': nextPageForm.children('input[name="report1_cachedId"]').val(),
+            }
+            returnArr = [res.text]
+            returnArr.extend(this.__getInfoHtml(
+                stuid, page=page+1, toOtherPageData=data))
+            return returnArr
 
     def __getCodeImg(this):
         return this.session.get('http://urp.hebau.edu.cn/validateCodeAction.do?random=0.08322962004793921').content
@@ -213,8 +250,13 @@ def calCreditScore(info):
     scoreSum = 0.0
     creditSum = 0.0
     for course in info['courses']:
-        scoreSum += float(course['credit']) * float(course['score'])
-        creditSum += float(course['credit'])
+        try:
+            score = float(course['credit']) * float(course['score'])
+            credit = float(course['credit'])
+            scoreSum += score
+            creditSum += credit
+        except Exception as e:
+            print(e)
     return scoreSum / creditSum
 
 
