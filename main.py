@@ -183,6 +183,14 @@ def get1_5InMem(obj):
     return obj.getInfoList(idRange)
 
 
+def getRangeOfSG():
+    return list(range(2019984020101, 2019984020124)) \
+        + list(range(2019984020201, 2019984020224)) \
+        + list(range(2019984020301, 2019984020321)) \
+        + list(range(2019984020401, 2019984020424)) \
+        + list(range(2019984020501, 2019984020525))
+
+
 def get1_5RangeOfSE():
     return list(range(2019984040101, 2019984040131)) \
         + list(range(2019984040201, 2019984040231)) \
@@ -202,6 +210,15 @@ def get1_5RangeOfCS():
             2019984020303, 2019984020305, 2019984010211, 2019984010308, 2019984010527]
 
 
+def getRangeOfKJ():
+    return list(range(2019994090101, 2019994090131)) \
+        + list(range(2019994090201, 2019994090231)) \
+        + list(range(2019994090301, 2019994090330)) \
+        + list(range(2019994090401, 2019994090430)) \
+        + list(range(2019994090501, 2019994090529)) \
+        + list(range(2019994090601, 2019994090630)) \
+        + [2019994020225, 2019994020224, 2019994020229, 2019994020210, 2019994130129, 2019994130126, 2019994130130, 2019994130128, 2019994130215, 2019994130210, 2019994130228, 2019984080418, 2019984080410, 2019984020127, 2019984020121, 2019994020220, 2019984020128, 2019984020310,
+            2019984020319, 2019984020313, 2019984020323, 2019984020409, 2019984020410, 2019994070229, 2019994070211, 2019994070333, 2019994070313, 2019994070431, 2019994070428, 2019984020109, 2019994070527, 2019994070130, 2019994070629, 2019994130201, 2019994130105, 2019994070203]
 # 去除正常考试及补考的信息
 
 
@@ -260,29 +277,29 @@ def calCreditScore(info):
     return scoreSum / creditSum
 
 
-def calCreditScoreDict(infoList):
-    creditScoreDict = {}
+def calCreditScoreArray(infoList):
+    creditScoreArr = []
     for info in infoList:
         try:
-            creditScore = calCreditScore(info)
-            dic = {
+            creditScoreArr.append({
                 "name": info['name'],
                 "stuid": info['stuid'],
-                "creditScore": creditScore,
-            }
-            creditScoreDict[creditScore] = dic
+                "creditScore": calCreditScore(info),
+            })
         except Exception as e:
-            print(e)
+            creditScoreArr.append({
+                "name": info['name'],
+                "stuid": info['stuid'],
+                "creditScore": 0,
+            })
+            print(f'{info["stuid"]} {info["name"]} {e}')
 
-    return creditScoreDict
+    return creditScoreArr
 
 
 def sortedCreditScoreList(infoList):
-    creditScoreDict = calCreditScoreDict(infoList)
-    sortedList = []
-    for key in sorted(creditScoreDict.keys(), reverse=True):
-        sortedList.append(creditScoreDict[key])
-    return sortedList
+    creditScoreArr = calCreditScoreArray(infoList)
+    return sorted(creditScoreArr, key=lambda x: x['creditScore'], reverse=True)
 
 # 爬出成绩并 save as json
 
@@ -309,6 +326,13 @@ def saveAsXlsx(infoList, scoreTplStuid, outFile):
         for course in info['courses']:
             courseDic[course['name']] = course
         coursesDic[info['stuid']] = courseDic
+    tplCourses = coursesDic[scoreTplStuid]
+    for info in infoList:
+        tempCourseList = info['courses']
+        info['courses'] = []
+        for course in tempCourseList:
+            if course['name'] in tplCourses:
+                info['courses'].append(course)
 
     # 排序过的 infoList
     sortedList = sortedCreditScoreList(infoList)
@@ -316,8 +340,6 @@ def saveAsXlsx(infoList, scoreTplStuid, outFile):
     # init excel
     wb = openpyxl.Workbook()
     ws = wb.active
-
-    tplCourses = coursesDic[scoreTplStuid]
 
     row = 1
     col = 1
