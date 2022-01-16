@@ -263,7 +263,7 @@ def duplicateRemoval(infoList):
     return infoList
 
 
-def calCreditScore(info):
+def calGPA(info):
     scoreSum = 0.0
     creditSum = 0.0
     for course in info['courses']:
@@ -277,29 +277,29 @@ def calCreditScore(info):
     return scoreSum / creditSum
 
 
-def calCreditScoreArray(infoList):
-    creditScoreArr = []
+def calGPAArray(infoList):
+    GPAArr = []
     for info in infoList:
         try:
-            creditScoreArr.append({
+            GPAArr.append({
                 "name": info['name'],
                 "stuid": info['stuid'],
-                "creditScore": calCreditScore(info),
+                "GPA": calGPA(info),
             })
         except Exception as e:
-            creditScoreArr.append({
+            GPAArr.append({
                 "name": info['name'],
                 "stuid": info['stuid'],
-                "creditScore": 0,
+                "GPA": 0,
             })
             print(f'{info["stuid"]} {info["name"]} {e}')
 
-    return creditScoreArr
+    return GPAArr
 
 
-def sortedCreditScoreList(infoList):
-    creditScoreArr = calCreditScoreArray(infoList)
-    return sorted(creditScoreArr, key=lambda x: x['creditScore'], reverse=True)
+def sortedGPAList(infoList):
+    GPAArr = calGPAArray(infoList)
+    return sorted(GPAArr, key=lambda x: x['GPA'], reverse=True)
 
 # 爬出成绩并 save as json
 
@@ -335,7 +335,7 @@ def saveAsXlsx(infoList, scoreTplStuid, outFile):
                 info['courses'].append(course)
 
     # 排序过的 infoList
-    sortedList = sortedCreditScoreList(infoList)
+    sortedList = sortedGPAList(infoList)
 
     # init excel
     wb = openpyxl.Workbook()
